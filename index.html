@@ -25,8 +25,6 @@ body{
              var(--bg);
 }
 .hidden{display:none}
-
-/* AUTH */
 .center{min-height:100vh;display:flex;align-items:center;justify-content:center}
 .card{
   width:min(420px,95vw);
@@ -152,93 +150,139 @@ li{margin-bottom:6px}
 </div>
 
 <script>
-// حسابات
+// ======== الحسابات ========
 function users(){return JSON.parse(localStorage.getItem('users')||'{}')}
 function save(u){localStorage.setItem('users',JSON.stringify(u))}
 
+// تبديل بين تسجيل الدخول وإنشاء الحساب
 function toggle(){
-  login.classList.toggle('hidden');
-  register.classList.toggle('hidden');
+  const loginDiv = document.getElementById('login');
+  const registerDiv = document.getElementById('register');
+  loginDiv.classList.toggle('hidden');
+  registerDiv.classList.toggle('hidden');
 }
-function register(){
-  const u=regUser.value,p=regPass.value;
-  if(!u||!p) return alert('أكمل البيانات');
-  const us=users(); if(us[u]) return alert('موجود');
-  us[u]={pass:p,points:0}; save(us); toggle();
-}
-function login(){
-  const u=loginUser.value,p=loginPass.value;
-  const us=users();
-  if(!us[u]||us[u].pass!==p) return alert('خطأ');
-  localStorage.setItem('session',u); load();
-}
-function logout(){localStorage.clear();location.reload()}
 
+// تسجيل حساب جديد
+function register(){
+  const u=document.getElementById('regUser').value.trim();
+  const p=document.getElementById('regPass').value.trim();
+
+  if(u==='' || p===''){
+    alert('لازم تدخل اسم وكلمة مرور');
+    return;
+  }
+
+  let us = users();
+  if(us[u]){
+    alert('اسم المستخدم مستخدم');
+    return;
+  }
+
+  us[u] = { pass: p, points: 0 };
+  save(us);
+
+  alert('تم إنشاء الحساب ✅');
+  toggle();
+}
+
+// تسجيل الدخول
+function login(){
+  const u=document.getElementById('loginUser').value.trim();
+  const p=document.getElementById('loginPass').value.trim();
+
+  const us = users();
+  if(!us[u] || us[u].pass!==p){
+    alert('اسم المستخدم أو كلمة المرور خطأ');
+    return;
+  }
+
+  localStorage.setItem('session', u);
+  load();
+}
+
+// تسجيل الخروج
+function logout(){
+  localStorage.removeItem('session');
+  location.reload();
+}
+
+// تحميل البيانات عند الدخول
 function load(){
-  const u=localStorage.getItem('session');
+  const u = localStorage.getItem('session');
   if(!u) return;
-  auth.classList.add('hidden');
-  app.classList.remove('hidden');
-  user.textContent=u;
-  points.textContent=users()[u].points;
-  bigPoints.textContent=users()[u].points;
+  document.getElementById('auth').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+  document.getElementById('user').textContent = u;
+  const us = users();
+  document.getElementById('points').textContent = us[u].points;
+  document.getElementById('bigPoints').textContent = us[u].points;
   updateLeaderboard();
 }
 load();
 
-// الألعاب
+// ======== الألعاب ========
+const gamesDiv = document.getElementById('games');
 for(let i=1;i<=54;i++){
   const d=document.createElement('div');
   d.className='game';
   d.textContent=i===1?'سين جيم':'لعبة '+i;
   if(i===1) d.onclick=openSJ;
-  games.appendChild(d);
+  gamesDiv.appendChild(d);
 }
 
-// Leaderboard
+// ======== Leaderboard ========
 function updateLeaderboard(){
-  leaderboard.innerHTML='';
+  const lb = document.getElementById('leaderboard');
+  lb.innerHTML='';
   Object.entries(users())
-    .sort((a,b)=>b[1].points-a[1].points)
+    .sort((a,b)=>b[1].points - a[1].points)
     .slice(0,10)
-    .forEach(([n,d])=>{
-      const li=document.createElement('li');
-      li.textContent=`${n} — ${d.points}`;
-      leaderboard.appendChild(li);
+    .forEach(([name,data])=>{
+      const li = document.createElement('li');
+      li.textContent = `${name} — ${data.points}`;
+      lb.appendChild(li);
     });
 }
 
-// سين جيم
+// ======== سين جيم ========
 const qs=[
  {q:'عاصمة اليابان؟',a:['طوكيو','أوساكا','كيوتو'],c:0},
- {q:'كم كوكب؟',a:['7','8','9'],c:1}
+ {q:'كم كوكب في المجموعة الشمسية؟',a:['7','8','9'],c:1}
 ];
 let t;
-function openSJ(){sj.style.display='flex';nextQ()}
-function closeSJ(){sj.style.display='none';clearInterval(t)}
+function openSJ(){document.getElementById('sj').style.display='flex';nextQ()}
+function closeSJ(){document.getElementById('sj').style.display='none';clearInterval(t)}
 function nextQ(){
   const q=qs[Math.floor(Math.random()*qs.length)];
   document.getElementById('q').textContent=q.q;
-  answers.innerHTML='';
+  const answersDiv = document.getElementById('answers');
+  answersDiv.innerHTML='';
   q.a.forEach((x,i)=>{
-    const b=document.createElement('div');
-    b.className='answer';b.textContent=x;
-    b.onclick=()=>{if(i===q.c)addPoint();nextQ()};
-    answers.appendChild(b);
+    const b = document.createElement('div');
+    b.className='answer';
+    b.textContent = x;
+    b.onclick = ()=>{if(i===q.c){addPoint();} nextQ();}
+    answersDiv.appendChild(b);
   });
-  let w=100;bar.style.width='100%';
+  let w=100;
+  const bar = document.getElementById('bar');
+  bar.style.width='100%';
   clearInterval(t);
-  t=setInterval(()=>{w-=2;bar.style.width=w+'%';if(w<=0)nextQ()},100);
+  t = setInterval(()=>{w-=2;bar.style.width=w+'%'; if(w<=0) nextQ()},100);
 }
+
+// إضافة نقطة عند الإجابة الصحيحة
 function addPoint(){
   const u=localStorage.getItem('session');
-  const us=users(); us[u].points++; save(us);
-  points.textContent=us[u].points;
-  bigPoints.textContent=us[u].points;
+  const us = users();
+  us[u].points++;
+  save(us);
+  document.getElementById('points').textContent = us[u].points;
+  document.getElementById('bigPoints').textContent = us[u].points;
   updateLeaderboard();
 }
 
-// Service Worker
+// ======== Service Worker ========
 if('serviceWorker' in navigator){
   navigator.serviceWorker.register('sw.js');
 }
