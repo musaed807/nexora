@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>NEXORA</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0b0f1a">
+
+<style>
+:root{
+  --bg:#0b0f1a;
+  --card:#111a33;
+  --accent:#6cf2c2;
+  --accent2:#6aa9ff;
+  --text:#e9eeff;
+}
+*{box-sizing:border-box;font-family:system-ui}
+body{
+  margin:0;color:var(--text);
+  background:radial-gradient(800px 400px at 80% -10%,#1b2a6a,transparent),
+             radial-gradient(600px 300px at -10% 10%,#0f3b2c,transparent),
+             var(--bg);
+}
+.hidden{display:none}
+
+/* AUTH */
+.center{min-height:100vh;display:flex;align-items:center;justify-content:center}
+.card{
+  width:min(420px,95vw);
+  background:linear-gradient(180deg,#141e3a,#0f1730);
+  border:1px solid #22306a;border-radius:18px;
+  padding:22px;box-shadow:0 20px 50px rgba(0,0,0,.45)
+}
+input{
+  width:100%;padding:12px;border-radius:12px;
+  border:1px solid #22306a;background:#0e183a;color:var(--text);
+  margin-bottom:10px
+}
+button{
+  width:100%;padding:12px;border-radius:12px;
+  border:none;font-weight:800;cursor:pointer
+}
+.primary{
+  background:linear-gradient(90deg,var(--accent),var(--accent2));
+  color:#04140c
+}
+.link{background:none;color:var(--accent);margin-top:8px}
+
+/* APP */
+header{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:14px 18px;border-bottom:1px solid #22306a
+}
+.logo{font-weight:900}
+.badge{padding:6px 10px;border-radius:999px;background:#0f1a3a}
+main{padding:20px;display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.panel{
+  background:linear-gradient(180deg,#141e3a,#0f1730);
+  border:1px solid #22306a;border-radius:16px;padding:16px
+}
+.points{font-size:34px;font-weight:900;color:var(--accent)}
+.games{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
+.game{
+  padding:10px;border-radius:12px;text-align:center;
+  background:#0f1a3a;border:1px solid #22306a;font-size:13px
+}
+ol{padding-right:18px}
+li{margin-bottom:6px}
+@media(max-width:900px){main{grid-template-columns:1fr}}
+
+/* SIN JEEM */
+.overlay{
+  position:fixed;inset:0;background:rgba(5,10,30,.85);
+  display:none;align-items:center;justify-content:center
+}
+.modal{
+  width:min(520px,95vw);
+  background:linear-gradient(180deg,#16235a,#0f1b45);
+  border:1px solid #2a3d8a;border-radius:18px;padding:18px
+}
+.answer{
+  padding:10px;border-radius:12px;border:1px solid #2a3d8a;
+  background:#0f1b45;margin-bottom:8px;cursor:pointer
+}
+.timer{height:6px;background:#1a2a6a;border-radius:999px;overflow:hidden;margin:10px 0}
+.bar{height:100%;width:100%;background:linear-gradient(90deg,var(--accent),var(--accent2))}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div class="center" id="auth">
+  <div class="card">
+    <h1>⚡ NEXORA</h1>
+
+    <div id="login">
+      <input id="loginUser" placeholder="اسم المستخدم">
+      <input id="loginPass" type="password" placeholder="كلمة المرور">
+      <button class="primary" onclick="login()">دخول</button>
+      <button class="link" onclick="toggle()">إنشاء حساب</button>
+    </div>
+
+    <div id="register" class="hidden">
+      <input id="regUser" placeholder="اسم المستخدم">
+      <input id="regPass" type="password" placeholder="كلمة المرور">
+      <button class="primary" onclick="register()">تسجيل</button>
+      <button class="link" onclick="toggle()">لدي حساب</button>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" class="hidden">
+<header>
+  <div class="logo">NEXORA</div>
+  <div>👤 <span id="user"></span></div>
+  <div class="badge">النقاط: <span id="points">0</span></div>
+  <button onclick="logout()">خروج</button>
+</header>
+
+<main>
+  <div class="panel">
+    <h2>لوحة اللاعب</h2>
+    <div class="points" id="bigPoints">0</div>
+    <button class="primary" onclick="openSJ()">ابدأ سين جيم 🔥</button>
+  </div>
+
+  <div class="panel">
+    <h2>🏆 Leaderboard عالمي</h2>
+    <ol id="leaderboard"></ol>
+  </div>
+
+  <div class="panel">
+    <h2>الألعاب (54)</h2>
+    <div class="games" id="games"></div>
+  </div>
+</main>
+</div>
+
+<!-- SIN JEEM -->
+<div class="overlay" id="sj">
+  <div class="modal">
+    <h2>🧠 سين جيم</h2>
+    <div class="timer"><div class="bar" id="bar"></div></div>
+    <div id="q"></div>
+    <div id="answers"></div>
+    <button class="link" onclick="closeSJ()">إغلاق</button>
+  </div>
+</div>
+
+<script>
+// حسابات
+function users(){return JSON.parse(localStorage.getItem('users')||'{}')}
+function save(u){localStorage.setItem('users',JSON.stringify(u))}
+
+function toggle(){
+  login.classList.toggle('hidden');
+  register.classList.toggle('hidden');
+}
+function register(){
+  const u=regUser.value,p=regPass.value;
+  if(!u||!p) return alert('أكمل البيانات');
+  const us=users(); if(us[u]) return alert('موجود');
+  us[u]={pass:p,points:0}; save(us); toggle();
+}
+function login(){
+  const u=loginUser.value,p=loginPass.value;
+  const us=users();
+  if(!us[u]||us[u].pass!==p) return alert('خطأ');
+  localStorage.setItem('session',u); load();
+}
+function logout(){localStorage.clear();location.reload()}
+
+function load(){
+  const u=localStorage.getItem('session');
+  if(!u) return;
+  auth.classList.add('hidden');
+  app.classList.remove('hidden');
+  user.textContent=u;
+  points.textContent=users()[u].points;
+  bigPoints.textContent=users()[u].points;
+  updateLeaderboard();
+}
+load();
+
+// الألعاب
+for(let i=1;i<=54;i++){
+  const d=document.createElement('div');
+  d.className='game';
+  d.textContent=i===1?'سين جيم':'لعبة '+i;
+  if(i===1) d.onclick=openSJ;
+  games.appendChild(d);
+}
+
+// Leaderboard
+function updateLeaderboard(){
+  leaderboard.innerHTML='';
+  Object.entries(users())
+    .sort((a,b)=>b[1].points-a[1].points)
+    .slice(0,10)
+    .forEach(([n,d])=>{
+      const li=document.createElement('li');
+      li.textContent=`${n} — ${d.points}`;
+      leaderboard.appendChild(li);
+    });
+}
+
+// سين جيم
+const qs=[
+ {q:'عاصمة اليابان؟',a:['طوكيو','أوساكا','كيوتو'],c:0},
+ {q:'كم كوكب؟',a:['7','8','9'],c:1}
+];
+let t;
+function openSJ(){sj.style.display='flex';nextQ()}
+function closeSJ(){sj.style.display='none';clearInterval(t)}
+function nextQ(){
+  const q=qs[Math.floor(Math.random()*qs.length)];
+  document.getElementById('q').textContent=q.q;
+  answers.innerHTML='';
+  q.a.forEach((x,i)=>{
+    const b=document.createElement('div');
+    b.className='answer';b.textContent=x;
+    b.onclick=()=>{if(i===q.c)addPoint();nextQ()};
+    answers.appendChild(b);
+  });
+  let w=100;bar.style.width='100%';
+  clearInterval(t);
+  t=setInterval(()=>{w-=2;bar.style.width=w+'%';if(w<=0)nextQ()},100);
+}
+function addPoint(){
+  const u=localStorage.getItem('session');
+  const us=users(); us[u].points++; save(us);
+  points.textContent=us[u].points;
+  bigPoints.textContent=us[u].points;
+  updateLeaderboard();
+}
+
+// Service Worker
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js');
+}
+</script>
+</body>
+</html>
